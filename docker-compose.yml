@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # ランナー1（軽量テスト用 - Redis不要）
+  runner-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: noaos-ci-runner:latest
+    container_name: noa-docker-runner-1
+    environment:
+      REPO_URL: https://github.com/noaxis/noaos
+      RUNNER_NAME: noa-docker-1
+      RUNNER_TOKEN: ${RUNNER_TOKEN}
+      RUNNER_WORKDIR: /runner/_work
+      LABELS: self-hosted,linux,x64,noa,docker,light,no-redis,runner-1
+      RUNNER_GROUP: default
+    volumes:
+      - runner1-work:/runner/_work
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    networks:
+      - ci-network
+
+  # ランナー2（重量テスト用 - Redis専用）
+  runner-2:
+    image: noaos-ci-runner:latest
+    container_name: noa-docker-runner-2
+    environment:
+      REPO_URL: https://github.com/noaxis/noaos
+      RUNNER_NAME: noa-docker-2
+      RUNNER_TOKEN: ${RUNNER_TOKEN}
+      RUNNER_WORKDIR: /runner/_work
+      LABELS: self-hosted,linux,x64,noa,docker,heavy,redis-primary,runner-2
+      RUNNER_GROUP: default
+    volumes:
+      - runner2-work:/runner/_work
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    networks:
+      - ci-network
+
+  # ランナー3（重量テスト用 - Redis予備）
+  runner-3:
+    image: noaos-ci-runner:latest
+    container_name: noa-docker-runner-3
+    environment:
+      REPO_URL: https://github.com/noaxis/noaos
+      RUNNER_NAME: noa-docker-3
+      RUNNER_TOKEN: ${RUNNER_TOKEN}
+      RUNNER_WORKDIR: /runner/_work
+      LABELS: self-hosted,linux,x64,noa,docker,heavy,redis-secondary,runner-3
+      RUNNER_GROUP: default
+    volumes:
+      - runner3-work:/runner/_work
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    networks:
+      - ci-network
+
+networks:
+  ci-network:
+    driver: bridge
+
+volumes:
+  runner1-work:
+  runner2-work:
+  runner3-work:
