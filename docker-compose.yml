@@ -1,59 +1,80 @@
-version: '3.8'
+# CPU専有（cpuset）をやめて、共有＋制限（cpus/mem_limit）に変更
+# これによりデスクトップアプリとリソースを共有できる
 
 services:
-  # ランナー1（軽量テスト用 - Redis不要）
+  # ランナー1（汎用）
   runner-1:
     build:
       context: .
       dockerfile: Dockerfile
     image: noaos-ci-runner:latest
     container_name: noa-docker-runner-1
+    cpus: 2
+    mem_limit: 2g
     environment:
       REPO_URL: https://github.com/noaxis/noaos
       RUNNER_NAME: noa-docker-1
       RUNNER_TOKEN: ${RUNNER_TOKEN}
       RUNNER_WORKDIR: /runner/_work
-      LABELS: self-hosted,linux,x64,noa,docker,light,no-redis,runner-1
+      LABELS: self-hosted,linux,x64,noa,docker,runner-1
       RUNNER_GROUP: default
+      # キャッシュディレクトリを明示
+      UV_CACHE_DIR: /cache/uv
+      PRE_COMMIT_HOME: /cache/pre-commit
     volumes:
       - runner1-work:/runner/_work
       - /var/run/docker.sock:/var/run/docker.sock
+      # 共有キャッシュ（全ランナーで共有）
+      - uv-cache:/cache/uv
+      - pre-commit-cache:/cache/pre-commit
     restart: unless-stopped
     networks:
       - ci-network
 
-  # ランナー2（重量テスト用 - Redis専用）
+  # ランナー2（汎用）
   runner-2:
     image: noaos-ci-runner:latest
     container_name: noa-docker-runner-2
+    cpus: 2
+    mem_limit: 2g
     environment:
       REPO_URL: https://github.com/noaxis/noaos
       RUNNER_NAME: noa-docker-2
       RUNNER_TOKEN: ${RUNNER_TOKEN}
       RUNNER_WORKDIR: /runner/_work
-      LABELS: self-hosted,linux,x64,noa,docker,heavy,redis-primary,runner-2
+      LABELS: self-hosted,linux,x64,noa,docker,runner-2
       RUNNER_GROUP: default
+      UV_CACHE_DIR: /cache/uv
+      PRE_COMMIT_HOME: /cache/pre-commit
     volumes:
       - runner2-work:/runner/_work
       - /var/run/docker.sock:/var/run/docker.sock
+      - uv-cache:/cache/uv
+      - pre-commit-cache:/cache/pre-commit
     restart: unless-stopped
     networks:
       - ci-network
 
-  # ランナー3（重量テスト用 - Redis予備）
+  # ランナー3（汎用）
   runner-3:
     image: noaos-ci-runner:latest
     container_name: noa-docker-runner-3
+    cpus: 2
+    mem_limit: 2g
     environment:
       REPO_URL: https://github.com/noaxis/noaos
       RUNNER_NAME: noa-docker-3
       RUNNER_TOKEN: ${RUNNER_TOKEN}
       RUNNER_WORKDIR: /runner/_work
-      LABELS: self-hosted,linux,x64,noa,docker,heavy,redis-secondary,runner-3
+      LABELS: self-hosted,linux,x64,noa,docker,runner-3
       RUNNER_GROUP: default
+      UV_CACHE_DIR: /cache/uv
+      PRE_COMMIT_HOME: /cache/pre-commit
     volumes:
       - runner3-work:/runner/_work
       - /var/run/docker.sock:/var/run/docker.sock
+      - uv-cache:/cache/uv
+      - pre-commit-cache:/cache/pre-commit
     restart: unless-stopped
     networks:
       - ci-network
@@ -66,3 +87,6 @@ volumes:
   runner1-work:
   runner2-work:
   runner3-work:
+  # 共有キャッシュボリューム
+  uv-cache:
+  pre-commit-cache:
