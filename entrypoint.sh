@@ -13,13 +13,14 @@ RUNNER_GROUP=${RUNNER_GROUP:-default}
 
 cd /actions-runner
 
-# 既存の設定ファイルを強制削除（コンテナ再起動時）
+# 古い設定を削除（競合防止）
 if [ -f ".runner" ]; then
-    echo "Removing existing runner configuration files..."
-    rm -f .runner .credentials .credentials_rsaparams || true
+    echo "Removing old runner configuration..."
+    ./config.sh remove --token "${RUNNER_TOKEN}" 2>/dev/null || true
+    rm -f .runner .credentials .credentials_rsaparams
 fi
 
-# ランナーの登録
+# 常に再登録（--replaceで既存セッションを置き換え）
 echo "Configuring GitHub Actions Runner..."
 ./config.sh \
     --unattended \
@@ -31,12 +32,12 @@ echo "Configuring GitHub Actions Runner..."
     --runnergroup "${RUNNER_GROUP}" \
     --replace
 
-# クリーンアップハンドラ
+# クリーンアップハンドラ（SIGTERM/SIGINT対応）
 cleanup() {
-    echo "Removing runner..."
-    ./config.sh remove --token "${RUNNER_TOKEN}" || true
+    echo "Graceful shutdown: removing runner..."
+    ./config.sh remove --token "${RUNNER_TOKEN}" 2>/dev/null || true
 }
-trap cleanup EXIT
+trap cleanup SIGTERM SIGINT EXIT
 
 # ランナー起動
 echo "Starting runner..."
